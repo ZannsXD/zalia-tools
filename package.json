@@ -1,0 +1,13 @@
+{
+  "name": "wa-pairing-ui",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "baileys-corp": "github:FallEzz/baileys-corp",
+    "express": "^4.18.2",
+    "pino": "^8.14.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
