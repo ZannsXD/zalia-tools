@@ -1,0 +1,46 @@
+const { 
+    default: makeWASocket, 
+    useMultiFileAuthState, 
+    delay, 
+    makeCacheableSignalKeyStore 
+} = require("baileys-corp");
+const express = require('express');
+const pino = require('pino');
+const path = require('path');
+
+const app = express();
+app.use(express.static('public'));
+
+app.get('/get-pairing', async (req, res) => {
+    let phoneNumber = req.query.number;
+    if (!phoneNumber) return res.status(400).json({ error: "No number" });
+    phoneNumber = phoneNumber.replace(/[^0-9]/g, '');
+
+    const { state, saveCreds } = await useMultiFileAuthState(`./sessions/${phoneNumber}`);
+
+    const sock = makeWASocket({
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' })),
+        },
+        printQRInTerminal: false,
+        logger: pino({ level: 'fatal' }),
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
+    });
+
+    if (!sock.authState.creds.registered) {
+        try {
+            await delay(2000);
+            const code = await sock.requestPairingCode(phoneNumber);
+            res.json({ success: true, code: code });
+        } catch (err) {
+            res.json({ success: false, error: err.message });
+        }
+    } else {
+        res.json({ success: false, error: "Already registered" });
+    }
+
+    sock.ev.on('creds.update', saveCreds);
+});
+
+app.listen(3000, () => console.log(`Server: http://localhost:3000`));
